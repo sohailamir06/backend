@@ -1,0 +1,26 @@
+# Node modules folder (dependencies)
+node_modules/
+
+# Environment variables file
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Optional: build/dist folders if any
+dist/
+build/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Optional: coverage reports
+coverage/
+

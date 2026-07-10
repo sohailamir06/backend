@@ -1,17 +1,36 @@
-const express = require("express");
+const app = require("./app");
 const connectDB = require("./config/db");
-const authRoutes = require("./routes/auth");
-const medicineRoutes = require("./routes/medicines");
-require("dotenv").config();
+const config = require("./config/env");
 
-const app = express();
-connectDB();
+let server;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+async function startServer() {
+  await connectDB();
 
-app.use("/api/auth", authRoutes);
-app.use("/api/medicines", medicineRoutes);
+  server = app.listen(config.port, () => {
+    console.log(`MediStock API running on port ${config.port}`);
+  });
+}
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully.`);
+  if (!server) {
+    process.exit(0);
+  }
+
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", (error) => {
+  console.error("Unhandled rejection:", error);
+  shutdown("unhandledRejection");
+});
+
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});

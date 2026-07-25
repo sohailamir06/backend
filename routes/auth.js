@@ -8,6 +8,8 @@ const { registerCompanySchema, loginSchema } = require("../validations/auth.vali
 
 router.post("/register-company", authLimiter, validate(registerCompanySchema), authController.registerCompany);
 router.post("/login", authLimiter, validate(loginSchema), authController.login);
+router.post("/refresh", authLimiter, authController.refresh);
+router.post("/logout", authController.logout);
 router.get("/me", authenticate, authController.me);
 
 module.exports = router;

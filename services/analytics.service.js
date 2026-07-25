@@ -15,6 +15,7 @@ async function dashboard(companyId) {
   const medicines = toMedicineList(await Medicine.find({ companyId }));
   const activities = (await Activity.find({ companyId }).sort({ timestamp: -1 }).limit(8)).map((item) => item.toClient());
   const stats = getInventoryStats(medicines, activities);
+  const alertGroups = getAlerts(medicines);
   const categorySummary = Object.values(
     medicines.reduce((summary, medicine) => {
       const category = medicine.category || "Other";
@@ -31,6 +32,9 @@ async function dashboard(companyId) {
   return {
     ...stats,
     categorySummary,
+    prescriptionCount: medicines.filter((medicine) => medicine.prescriptionRequired).length,
+    stockRiskItems: [...alertGroups.outOfStock, ...alertGroups.lowStock].slice(0, 5),
+    expiryRiskItems: [...alertGroups.expired, ...alertGroups.expiringSoon].slice(0, 5),
   };
 }
 

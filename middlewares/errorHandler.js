@@ -3,6 +3,7 @@ const config = require("../config/env");
 function notFound(req, res, next) {
   const error = new Error(`Route not found: ${req.originalUrl}`);
   error.statusCode = 404;
+  error.code = "ROUTE_NOT_FOUND";
   next(error);
 }
 
@@ -48,9 +49,12 @@ function errorHandler(error, req, res, next) {
 
   res.status(statusCode).json({
     status: "error",
-    message,
-    ...(details ? { details } : {}),
-    ...(config.env === "development" ? { stack: error.stack } : {}),
+    error: {
+      code: error.code || (statusCode === 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED"),
+      message,
+      ...(details ? { details } : {}),
+    },
+    requestId: req.id,
   });
 }
 

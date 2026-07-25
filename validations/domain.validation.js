@@ -8,7 +8,7 @@ const paginationQuery = Joi.object({
   search: Joi.string().trim().allow("").default(""),
   category: Joi.string().trim().allow("").default(""),
   status: Joi.string().valid("all", "healthy", "low-stock", "out-of-stock").default("all"),
-  sortBy: Joi.string().trim().allow("").default(""),
+  sortBy: Joi.string().valid("", "name", "category", "manufacturer", "quantity", "expiryDate", "createdAt", "updatedAt").default(""),
   order: Joi.string().valid("asc", "desc").default("asc"),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(200).default(50),

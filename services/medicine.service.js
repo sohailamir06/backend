@@ -1,7 +1,7 @@
 const Medicine = require("../models/Medicine");
 const AppError = require("../utils/AppError");
 const { createPublicId } = require("../utils/id");
-const { stableBarcode, getStockStatus, medicinesToCsv } = require("../utils/inventory");
+const { stableBarcode, medicinesToCsv } = require("../utils/inventory");
 const activityService = require("./activity.service");
 
 function toClientList(items) {
@@ -12,11 +12,12 @@ function buildListQuery(companyId, query) {
   const filters = { companyId };
 
   if (query.search) {
+    const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     filters.$or = [
-      { name: new RegExp(query.search, "i") },
-      { manufacturer: new RegExp(query.search, "i") },
-      { batchNumber: new RegExp(query.search, "i") },
-      { barcode: new RegExp(query.search, "i") },
+      { name: new RegExp(escaped, "i") },
+      { manufacturer: new RegExp(escaped, "i") },
+      { batchNumber: new RegExp(escaped, "i") },
+      { barcode: new RegExp(escaped, "i") },
     ];
   }
 
@@ -24,24 +25,25 @@ function buildListQuery(companyId, query) {
     filters.category = query.category;
   }
 
-  return filters;
-}
+  if (query.status === "out-of-stock") filters.quantity = 0;
+  if (query.status === "low-stock") filters.$expr = { $and: [{ $gt: ["$quantity", 0] }, { $lte: ["$quantity", "$minThreshold"] }] };
+  if (query.status === "healthy") filters.$expr = { $gt: ["$quantity", "$minThreshold"] };
 
-function applyStatusFilter(medicines, status) {
-  if (!status || status === "all") return medicines;
-  return medicines.filter((medicine) => getStockStatus(medicine) === status);
+  return filters;
 }
 
 async function list(companyId, query) {
   const sortField = query.sortBy || "name";
   const sortDirection = query.order === "desc" ? -1 : 1;
-  const medicines = await Medicine.find(buildListQuery(companyId, query)).sort({ [sortField]: sortDirection });
-  const clientItems = applyStatusFilter(toClientList(medicines), query.status);
-  const start = (query.page - 1) * query.limit;
+  const filters = buildListQuery(companyId, query);
+  const [medicines, total] = await Promise.all([
+    Medicine.find(filters).sort({ [sortField]: sortDirection }).skip((query.page - 1) * query.limit).limit(query.limit),
+    Medicine.countDocuments(filters),
+  ]);
 
   return {
-    items: clientItems.slice(start, start + query.limit),
-    total: clientItems.length,
+    items: toClientList(medicines),
+    total,
     page: query.page,
     limit: query.limit,
   };

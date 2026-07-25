@@ -16,24 +16,34 @@ const config = require("./config/env");
 const { apiLimiter } = require("./middlewares/rateLimiter");
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 const sanitizeRequest = require("./middlewares/mongoSanitize");
+const crypto = require("crypto");
+const AppError = require("./utils/AppError");
 
 const app = express();
 
 app.set("trust proxy", 1);
 
 app.use(helmet());
+app.use((req, res, next) => {
+  req.id = req.get("X-Request-Id") || crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.id);
+  if (req.path.startsWith("/api") && req.path !== "/api/health") res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || config.clientOrigins.includes(origin)) {
+      const normalizedOrigin = origin?.replace(/\/$/, "");
+      if (!normalizedOrigin || config.clientOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("Not allowed by CORS"));
+      return callback(new AppError("Request origin is not allowed", 403, undefined, "CORS_ORIGIN_DENIED"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+    exposedHeaders: ["X-Request-Id", "Content-Disposition"],
   }),
 );
 app.use(express.json({ limit: "20kb" }));
@@ -42,16 +52,20 @@ app.use(sanitizeRequest);
 app.use(hpp());
 app.use(apiLimiter);
 
-app.use("/api/health", healthRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/medicines", medicineRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/storage-locations", storageLocationRoutes);
-app.use("/api/prescriptions", prescriptionRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/activities", activityRoutes);
-app.use("/api/barcodes", barcodeRoutes);
-app.use("/api", analyticsRoutes);
+function mountApi(prefix) {
+  app.use(`${prefix}/health`, healthRoutes);
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/medicines`, medicineRoutes);
+  app.use(`${prefix}/categories`, categoryRoutes);
+  app.use(`${prefix}/storage-locations`, storageLocationRoutes);
+  app.use(`${prefix}/prescriptions`, prescriptionRoutes);
+  app.use(`${prefix}/settings`, settingsRoutes);
+  app.use(`${prefix}/activities`, activityRoutes);
+  app.use(`${prefix}/barcodes`, barcodeRoutes);
+  app.use(prefix, analyticsRoutes);
+}
+mountApi("/api/v1");
+mountApi("/api");
 
 app.use(notFound);
 app.use(errorHandler);

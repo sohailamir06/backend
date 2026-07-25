@@ -33,7 +33,10 @@ const loginSchema = Joi.object({
   password: Joi.string().min(1).max(128).required(),
 });
 
+const refreshSchema = Joi.object({});
+
 module.exports = {
   registerCompanySchema,
   loginSchema,
+  refreshSchema,
 };

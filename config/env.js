@@ -8,7 +8,9 @@ const envSchema = Joi.object({
   PORT: Joi.number().port().default(5000),
   MONGODB_URI: Joi.string().trim().required(),
   JWT_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRES_IN: Joi.string().trim().default("7d"),
+  JWT_EXPIRES_IN: Joi.string().trim().default("15m"),
+  REFRESH_TOKEN_EXPIRES_DAYS: Joi.number().integer().min(1).max(90).default(30),
+  COOKIE_SAME_SITE: Joi.string().valid("lax", "strict", "none").default("lax"),
   CLIENT_ORIGIN: Joi.string().trim().default("http://localhost:5173"),
   BCRYPT_SALT_ROUNDS: Joi.number().integer().min(10).max(15).default(12),
   RATE_LIMIT_WINDOW_MS: Joi.number().integer().min(60000).default(900000),
@@ -29,7 +31,11 @@ module.exports = {
   mongoUri: env.MONGODB_URI,
   jwtSecret: env.JWT_SECRET,
   jwtExpiresIn: env.JWT_EXPIRES_IN,
-  clientOrigins: env.CLIENT_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean),
+  refreshTokenExpiresDays: env.REFRESH_TOKEN_EXPIRES_DAYS,
+  cookieSameSite: env.COOKIE_SAME_SITE,
+  clientOrigins: env.CLIENT_ORIGIN.split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean),
   bcryptSaltRounds: env.BCRYPT_SALT_ROUNDS,
   rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
   rateLimitMax: env.RATE_LIMIT_MAX,

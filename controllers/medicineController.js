@@ -3,7 +3,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const { success } = require("../utils/response");
 
 exports.list = asyncHandler(async (req, res) => {
-  success(res, await medicineService.list(req.companyId, req.query));
+  const result = await medicineService.list(req.companyId, req.query);
+  success(res, result.items, 200, { total: result.total, page: result.page, limit: result.limit });
 });
 
 exports.getById = asyncHandler(async (req, res) => {

@@ -1,7 +1,8 @@
-function success(res, data, statusCode = 200) {
+function success(res, data, statusCode = 200, meta = undefined) {
   return res.status(statusCode).json({
     status: "success",
     data,
+    ...(meta ? { meta } : {}),
   });
 }
 
